@@ -1,0 +1,10 @@
+streamlit
+torch
+torchvision
+timm
+pillow
+pandas
+numpy
+requests
+scikit-learn
+nltk
