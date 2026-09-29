@@ -1,0 +1,7 @@
+{
+  "architecture": "mobilenetv3_small_100",
+  "num_classes": 12,
+  "image_size": 224,
+  "test_accuracy": 0.6209912536443148,
+  "test_macro_f1": 0.6116545709019666
+}

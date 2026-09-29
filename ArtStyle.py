@@ -1,3 +1,5 @@
+import json
+
 import streamlit as st
 import torch
 import torch.nn as nn
@@ -26,64 +28,26 @@ DEVICE = torch.device("cpu")
 
 
 # =========================================================
-# CLASS NAMES
-# IMPORTANT:
-# This order must match the order used during training.
-# ImageFolder normally sorts class folders alphabetically.
+# MODEL CONFIG + CLASS NAMES
+# These are written by notebook/modelling.ipynb every time the model is
+# trained, so they can never drift out of sync with the actual checkpoint
+# the way a hand-maintained class list could.
 # =========================================================
 
-class_names = [
-    "Baroque",
-    "Cubism",
-    "Expressionism",
-    "Impressionism",
-    "Pop Art",
-    "Post-Impressionism",
-    "Primitivism",
-    "Renaissance",
-    "Romanticism",
-    "Suprematism",
-    "Surrealism",
-    "Symbolism"
-]
+@st.cache_data
+def load_model_config():
+    with open("artifacts/model_config.json") as f:
+        return json.load(f)
 
 
-# =========================================================
-# MODEL
-# =========================================================
+@st.cache_data
+def load_class_names():
+    with open("artifacts/class_names.json") as f:
+        return json.load(f)
 
-class SimpleArtClassifier(nn.Module):
 
-    def __init__(self, num_classes=12):
-
-        super(SimpleArtClassifier, self).__init__()
-
-        self.base_model = timm.create_model(
-            "efficientnet_b0",
-            pretrained=True
-        )
-
-        self.features = nn.Sequential(
-            *list(self.base_model.children())[:-1]
-        )
-
-        enet_out_size = 1280
-
-        self.classifier = nn.Sequential(
-            nn.Flatten(),
-            nn.Linear(
-                enet_out_size,
-                num_classes
-            )
-        )
-
-    def forward(self, x):
-
-        x = self.features(x)
-
-        output = self.classifier(x)
-
-        return output
+model_config = load_model_config()
+class_names = load_class_names()
 
 
 # =========================================================
@@ -93,40 +57,19 @@ class SimpleArtClassifier(nn.Module):
 @st.cache_resource
 def load_model():
 
-    model = SimpleArtClassifier(
-        num_classes=len(class_names)
+    model = timm.create_model(
+        model_config["architecture"],
+        pretrained=False,
+        num_classes=model_config["num_classes"],
     )
 
-    checkpoint = torch.load(
+    state_dict = torch.load(
         "artifacts/model.pth",
         map_location=DEVICE
     )
 
-    # Handle different checkpoint formats
-    if isinstance(checkpoint, dict):
-
-        if "state_dict" in checkpoint:
-            checkpoint = checkpoint["state_dict"]
-
-        elif "model_state_dict" in checkpoint:
-            checkpoint = checkpoint["model_state_dict"]
-
-    # Remove "module." prefix if model was trained with DataParallel
-    new_state_dict = {}
-
-    for key, value in checkpoint.items():
-
-        new_key = key.replace("module.", "")
-
-        new_state_dict[new_key] = value
-
-    model.load_state_dict(
-        new_state_dict,
-        strict=True
-    )
-
+    model.load_state_dict(state_dict, strict=True)
     model.to(DEVICE)
-
     model.eval()
 
     return model
@@ -154,14 +97,16 @@ style_data = load_style_data()
 
 # =========================================================
 # IMAGE TRANSFORMATION
-# IMPORTANT:
-# Must match the preprocessing used during training.
+# Size comes from model_config.json so the app always matches whatever
+# resolution the model was actually trained at.
 # =========================================================
+
+IMG_SIZE = model_config["image_size"]
 
 transform = transforms.Compose([
 
     transforms.Resize(
-        (128, 128)
+        (IMG_SIZE, IMG_SIZE)
     ),
 
     transforms.ToTensor(),
@@ -228,6 +173,12 @@ def predict(image_file):
 # =========================================================
 
 st.sidebar.title("🎨 ArtStyle Predictor")
+
+st.sidebar.caption(
+    f"Model: {model_config['architecture']} · "
+    f"Test accuracy: {model_config['test_accuracy']*100:.1f}% · "
+    f"Test macro-F1: {model_config['test_macro_f1']:.2f}"
+)
 
 uploaded_file = st.sidebar.file_uploader(
     "Choose an image...",

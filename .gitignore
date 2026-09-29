@@ -14,12 +14,15 @@ env/
 # Streamlit
 .streamlit/secrets.toml
 
-# Datasets
+# Datasets (the image folders are ~1 GB; download from Kaggle, see README)
 dataset/
-data/
+data/*
+!data/art_style.csv
+!data/artists.csv
 
-# Model files
+# Model files (only the deployed classifier is versioned)
 *.pth
+!artifacts/model.pth
 *.pt
 *.ckpt
 *.onnx
@@ -36,3 +39,6 @@ Thumbs.db
 
 # Python cache
 .pytest_cache/
+# Personal documents
+*.docx
+*.pptx

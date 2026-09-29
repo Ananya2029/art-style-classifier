@@ -1,14 +1,3 @@
-"""
-Run this from inside your art_style_classifier folder (same place you run
-`streamlit run ArtStyle.py` from), with the same Python environment.
-
-    python diagnose_artists.py
-
-It calls the exact same lookup logic as pages/Artists.py for all 50 artists
-in data/artists.csv and prints a pass/fail report with the reason for each
-failure, so we can see precisely what's going wrong instead of guessing.
-"""
-
 import sys
 import time
 import pandas as pd
@@ -23,7 +12,6 @@ headers = {
 
 
 def try_known_url(artist_name, known_url):
-    """Mirrors STEP 0 in pages/Artists.py, including the retry-once-on-429 fix."""
     if not isinstance(known_url, str) or "/wiki/" not in known_url:
         return "no_wikipedia_url_in_csv", None
 
